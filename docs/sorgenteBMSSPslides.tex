@@ -1,0 +1,875 @@
+\documentclass[aspectratio=169]{beamer}
+
+\usepackage[italian]{babel}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern} 
+\usepackage{amsmath}
+\usepackage{tikz}
+\usepackage{silence}
+\WarningFilter{latexfont}{Font shape}
+\WarningFilter{latexfont}{Some font shapes}
+\usepackage{clrscode3e}
+\usetikzlibrary{shapes.geometric, arrows.meta, positioning}
+\usefonttheme[onlymath]{serif}
+
+%Colori
+\definecolor{darkgreen}{RGB}{10, 134, 54}
+\definecolor{lightgreen}{RGB}{13, 179, 77}
+\definecolor{blockbodybg}{RGB}{232, 242, 234}
+
+%Impostazioni Tema Beamer
+\usefonttheme{default}
+\setbeamertemplate{navigation symbols}{}
+
+\setbeamercolor{structure}{fg=darkgreen}
+\setbeamercolor{title}{bg=lightgreen, fg=black}
+\setbeamercolor{frametitle}{bg=lightgreen, fg=white}
+\setbeamercolor{block title}{bg=darkgreen, fg=white}
+\setbeamercolor{block body}{bg=blockbodybg, fg=black}
+\setbeamercolor{itemize item}{fg=darkgreen}
+\setbeamercolor{itemize subitem}{fg=darkgreen}
+
+\setbeamertemplate{itemize items}[ball]
+
+\setbeamertemplate{blocks}[rounded][shadow=true]
+
+\setbeamertemplate{title page}{
+    \vfill
+    \begin{center}
+        \begin{beamercolorbox}[sep=8pt,center,shadow=true,rounded=true,wd=0.85\paperwidth]{title}
+            \usebeamerfont{title}\inserttitle\par%
+        \end{beamercolorbox}
+        \vskip2.5em\par
+        \usebeamerfont{institute}\insertinstitute\par
+        \vskip1.5em\par
+        \usebeamerfont{date}\insertdate\par
+    \end{center}
+    \vfill
+}
+
+% Barra superiore (Headline)
+\setbeamertemplate{headline}{
+    \begin{beamercolorbox}[ht=3.5ex,dp=1ex]{block title}
+    \end{beamercolorbox}
+}
+
+% Barra inferiore (Footline)
+\setbeamertemplate{footline}{
+    \begin{beamercolorbox}[ht=2.5ex,dp=1ex]{block title}
+    \end{beamercolorbox}
+}
+
+
+% Informazioni Titolo
+\title{Breaking the Sorting Barrier for Directed Single-Source Shortest Paths}
+\institute{Raed Abbas\\ Sotto la supervisione del Prof. Alessandro Barenghi\\Politecnico di Milano}
+\date{5 marzo 2026}
+
+\begin{document}
+
+% Slide: Titolo 
+\begin{frame}
+    \titlepage
+\end{frame}
+
+% Slide : Introduzione
+\begin{frame}{Introduzione}
+    \begin{block}{Ingredienti}
+        \begin{itemize}
+            \item Grafo Diretto $\mathbf{G = (V,E)}$ dove:
+            \begin{itemize}
+                \item $\mathbf{V}$: insieme dei vertici (con $\vert \mathbf{V}\vert$=n)
+                \item $\mathbf{E}$: insieme dei archi (con $\vert \mathbf{E}\vert$=m)
+            \end{itemize}
+            \item Lavoriamo con archi a pesi non negativi, quindi definiamo la funzione peso: \\ $w_{uv}$ $:\mathbf{E}$ $\rightarrow$ $\mathbb{R}_{\ge 0}$  $\forall (u,v) \in \mathbf{E}$
+            \item Vertice sorgente $s$
+        \end{itemize}
+    \end{block}
+    \begin{block}{Obiettivo}
+    Trovare la lunghezza del percorso più breve tra $s$ e ogni vertice in $\mathbf{V}$.
+    \end{block}
+\end{frame}
+% Slide: Dijkstra Classico
+\begin{frame}[fragile]{L'approccio storico: \textsc{Dijkstra} Classico}
+    \begin{columns}
+        \begin{column}{0.5\textwidth}
+            La versione base seleziona il minimo scorrendo l'intero vettore $\mathbf{d}$ ad ogni iterazione.
+            \vspace{0.2cm}
+            \begin{block}{Complessità}
+                \begin{itemize}
+                    \item \textbf{Estrazione minimo:} $\mathcal{O}(\vert\mathbf{V}\vert)$
+                    \item \textbf{Iterazioni:} $\vert\mathbf{V}\vert$
+                    \item \textbf{Complessità Computazionale:} $\mathcal{O}(\vert V\vert^2 + \vert E\vert)$
+                \end{itemize}
+            \end{block}
+        \end{column}
+        \begin{column}{0.5\textwidth}
+            \scriptsize
+            \begin{codebox}
+            \Procname{$\proc{Dijkstra-Naive}(\mathbf{G}, w, s)$}
+            \li $\proc{Init-Single-Source}(\mathbf{G}, s)$
+            \li $\mathbf{S} \gets \emptyset$
+            \li $\mathbf{Q} \gets \mathbf{V}$
+            \li \While $\mathbf{Q} \neq \emptyset$
+            \li   \Do $u \gets \proc{Extract-Min-Array}(\mathbf{Q})$
+            \li       $\mathbf{S} \gets \mathbf{S} \cup \{u\}$
+            \li       \For each vertice $v \in \mathbf{G}.Adj[u]$
+            \li           \Do $\proc{Relax}(u, v, w)$
+                    \End
+                \End
+            \end{codebox}
+        \end{column}
+    \end{columns}
+\end{frame}
+
+
+% Slide: Dijkstra con Priority Queue
+\begin{frame}[fragile]{Miglioramento: \textsc{Dijkstra} con Priority Queue}
+    \begin{columns}
+        \begin{column}{0.5\textwidth}
+            L'uso di un Min-Heap (o Coda di Priorità) velocizza l'estrazione, ma introduce un costo logaritmico fisso per il \textit{sorting} della frontiera.
+            \vspace{0.2cm}
+            \begin{block}{Complessità}
+                \begin{itemize}
+                    \item \textbf{Estrazione minimo:} $\mathcal{O}(\log \vert \mathbf{V}\vert)$
+                    \item \textbf{Decrease Key:} $\mathcal{O}(\log \vert \mathbf{V}\vert)$ 
+                    \item \textbf{Complessità Computazionale:} $\mathcal{O}(\vert \mathbf{E}\vert \log \vert \mathbf{V}\vert + \vert \mathbf{V}\vert \log \vert \mathbf{V}\vert)$ 
+                \end{itemize}
+            \end{block}
+            \small \textit{(Su grafi sparsi $\vert \mathbf{E}\vert$ $\approx$ $\vert \mathbf{V}\vert$, il tempo è limitato a $\Omega(\vert \mathbf{V}\vert \log \vert \mathbf{V}\vert)$).}
+        \end{column}
+        \begin{column}{0.5\textwidth}
+            \scriptsize
+            \begin{codebox}
+            \Procname{$\proc{Dijkstra-PQ}(\mathbf{G}, w, s)$}
+            \li $\proc{Init-Single-Source}(\mathbf{G}, s)$
+            \li $\mathbf{S} \gets \emptyset$
+            \li $\mathbf{Q} \gets \emptyset$ \Comment Min-Heap
+            \li \For each $v \in \mathbf{V}$ 
+            \li \Do $\proc{Insert}$ $(\mathbf{Q}, v)$ \End
+            \li \While $\mathbf{Q} \neq \emptyset$
+            \li   \Do $u \gets \proc{Extract-Min}(\mathbf{Q})$
+            \li       $\mathbf{S} \gets \mathbf{S} \cup \{u\}$
+            \li       \For each $v \in \mathbf{G}.Adj[u]$
+            \li           \Do $\proc{Relax-and-Decrease-Key}(u, v, w)$
+                    \End
+                \End
+            \end{codebox}
+        \end{column}
+    \end{columns}
+\end{frame}
+
+% Slide: Operazione di rilassamento
+\begin{frame}{Operazione di Rilassamento (Relax)}
+    Sia il classico Dijkstra che il moderno BMSSP condividono la stessa operazione fondamentale per aggiornare le distanze: il \textbf{Rilassamento} di un arco.
+    \vspace{0.2cm}
+
+    \begin{block}{L'Idea Intuitiva}
+        Immaginiamo di trovarci nel nodo $u$ e di voler andare nel nodo $v$ tramite l'arco $(u,v)$. \\
+        Ci chiediamo: \textbf{"Passare da $u$ mi permette di arrivare a $v$ facendo meno strada?"}
+    \end{block}
+
+    \begin{exampleblock}{La Formula}
+        \centering
+        \textbf{se} $\text{dist}(u) + w(u,v) < \text{dist}(v)$ \textbf{allora} $\text{dist}(v) \gets \text{dist}(u) + w(u,v)$
+    \end{exampleblock}
+
+    \small
+    \textbf{Legenda dei termini:}
+    \begin{itemize}
+        \item \textbf{$\text{dist}(v)$}: La miglior distanza trovata finora dalla sorgente al nodo $v$.
+        \item \textbf{$w(u,v)$}: Il costo (peso) dell'arco diretto che collega il nodo $u$ al nodo $v$.
+        \item \textbf{$\gets$}: Operazione di aggiornamento (assegnamento del nuovo valore).
+    \end{itemize}
+\end{frame}
+
+% Slide: Collo di Bottiglia
+\begin{frame}{Il Collo di Bottiglia: La Barriera del Sorting}
+    \begin{block}{Il Limite di Dijkstra}
+        \begin{itemize}
+            \item L'algoritmo di Dijkstra mantiene una "frontiera" di vertici scoperti ma non ancora processati.
+            \item Ad ogni passo, deve estrarre il vertice con la distanza minima usando una coda di priorità (Min-Heap).
+            \item Questo continuo ordinamento richiede un tempo minimo di $\Omega(\vert \mathbf{V}\vert \log \vert \mathbf{V}\vert)$, creando un "collo di bottiglia" invalicabile sui grafi sparsi.
+        \end{itemize}
+    \end{block}
+    \begin{block}{L'Idea del Paper}
+        Fondere Dijkstra con l'approccio di \textbf{Bellman-Ford}: esplorare i vertici in "gruppi" delimitati da un upper-bound $B$, evitando di mantenere un ordine totale tra tutti i nodi scoperti.
+    \end{block}
+\end{frame}
+
+\begin{frame}{Confronto 3 approcci}
+    \begin{table}
+        \centering
+        \renewcommand{\arraystretch}{1.8}
+        \begin{tabular}{|p{2.6cm}|p{3.2cm}|p{3.6cm}|p{3.2cm}|} 
+        \hline
+        \textbf{\textcolor{darkgreen}{Caratteristica}} & \textbf{\textcolor{darkgreen}{Dijkstra Ingenuo}} & \textbf{\textcolor{darkgreen}{Dijkstra (Min-Heap)}} & \textbf{\textcolor{darkgreen}{BMSSP}} \\ \hline
+        \textbf{Complessità Temporale} & $\mathcal{O}(\vert \mathbf{V}\vert^2)$ & $\mathcal{O}(\vert \mathbf{E}\vert + \vert \mathbf{V}\vert \log \vert \mathbf{V}\vert)$ & $\mathcal{O}(\vert \mathbf{E}\vert \log^{2/3} \vert \mathbf{V}\vert)$ \\ \hline
+        \textbf{Complessità Spaziale} & $\mathcal{O}(\vert \mathbf{V}\vert + \vert \mathbf{E}\vert)$ & $\mathcal{O}(\vert \mathbf{V}\vert + \vert \mathbf{E}\vert)$ & $\mathcal{O}(\vert \mathbf{V}\vert + \vert \mathbf{E}\vert)$ \\ \hline
+        \end{tabular}
+    \end{table}  
+\end{frame}
+
+% Slide: Assunzioni del paper
+\begin{frame}{Introduzione al BMSSP: Assunzioni}
+    \begin{block}{Assunzioni}
+        \begin{itemize}
+            \item ogni vertice $v$ è raggiungibile da $s$ (cioè $\vert \mathbf{E}\vert \geq \vert \mathbf{V}\vert-1$)
+            \begin{itemize}
+                \item \textcolor{red}{Se violata}: non succede niente, ma quest'assuzione serve matematicamente per semplificare le notazioni asintotiche.
+            \end{itemize}
+            \item Modello \textit{Comparison-Addition}: L'algoritmo lavora sui pesi degli archi usando solo operazioni di confronto e addizione.
+\begin{itemize}
+    \item \textcolor{red}{\textbf{Se violata:}} Se il modello permettesse manipolazioni di bit (modello \textit{Word RAM}) e i pesi fossero limitati ai \textbf{numeri interi}, questo algoritmo non sarebbe necessario. L'algoritmo di Thorup risolve già il problema in tempo quasi-lineare sfruttando le operazioni binarie. Il BMSSP è fondamentale proprio perché garantisce questi tempi sub-ottimali operando nel modello classico con \textbf{pesi reali} ($\mathbb{R}$).
+\end{itemize}
+            \item tutte le lunghezze dei percorsi sono diverse
+\begin{itemize}
+    \item \textcolor{red}{Se violata}: è un'assunzione senza perdita di generalità, per evitare la formazione dei DAG (Grafo Aciclico Diretto)
+\end{itemize}
+
+        \end{itemize}
+    \end{block}
+\end{frame}
+
+% Slide: Algoritmo di Thorup
+\begin{frame}{Digressione: Il funzionamento dell'Algoritmo di Thorup}
+    Per contestualizzare il limite del BMSSP, è utile ricordare come opera l'algoritmo di Thorup, che risolve il SSSP in tempo quasi-lineare per grafi diretti.
+    \vspace{0.1cm}
+    
+    \begin{block}{L'Idea Chiave: Bucket Sorting su bit}
+        \small
+        \begin{itemize}
+            \setlength{\itemsep}{0.1cm} 
+            \item \textbf{Struttura:} Invece del Min-Heap, distribuisce i vertici in \textbf{bucket} (secchi) basandosi sui bit più significativi delle distanze.
+            \item \textbf{Operazioni Word RAM:} Utilizza operazioni a livello di bit (\textit{bitwise shift}, identificazione del bit più significativo) che la CPU esegue in tempo costante $\mathcal{O}(1)$.
+            \item \textbf{Complessità:} Raggiunge tempi sub-ottimali ($\mathcal{O}(|E| + |V| \log \log |V|)$) abbattendo il costo di estrazione del minimo.
+        \end{itemize}
+    \end{block}
+    
+\end{frame}
+
+% Slide: Thorup e l'Operatività sui Bit
+\begin{frame}{Thorup: Operatività sui Bit}
+    È fondamentale capire \textbf{come} Thorup usa i bit per aggirare l'ordinamento in tempo $\mathcal{O}(1)$.
+    \vspace{0.1cm}
+    
+    \begin{block}{Calcolo dell'Indice del Bucket (XOR e MSB)}
+        \small
+        \begin{itemize}
+            \setlength{\itemsep}{0.1cm} 
+            \item Invece di un Min-Heap, i vertici sono smistati in \textbf{bucket} indicizzati.
+            \item Quando l'arco $(u,v)$ viene rilassato, in quale bucket va spostato il nodo $v$?
+            \item \textbf{La soluzione:} L'indice si calcola trovando il bit più significativo (\textit{MSB}) in cui la vecchia e la nuova distanza differiscono. \\
+            Operativamente: \textbf{$\text{Indice} = \text{MSB}(\mathbf{d}_{\text{old}}[v] \oplus \mathbf{d}_{\text{new}}[v])$}
+            \item L'operatore logico \textit{XOR} ($\oplus$) e la ricerca dell'MSB sono eseguiti in un singolo ciclo di clock della CPU nel modello \textit{Word RAM}.
+        \end{itemize}
+    \end{block}
+    
+    \vspace{0.1cm}
+    \footnotesize \textbf{Il limite:} Questo trucco esige che i pesi siano \textbf{numeri interi} (sequenze fisse di bit). Il BMSSP usa pesi \textbf{reali} ($\mathbb{R}$), sui quali operatori a livello di bit come l'XOR non hanno senso o non sono applicabili.
+\end{frame}
+
+% Slide: Thorup: La Gerarchia dei Componenti
+\begin{frame}{Thorup: La Gerarchia dei Componenti}
+    Oltre ai bit, il secondo pilastro di Thorup è la gestione gerarchica del grafo per evitare l'ordinamento globale dei nodi.
+    \vspace{0.3cm}
+
+    \begin{columns}[T]
+        \begin{column}{0.52\textwidth}
+            \begin{block}{L'approccio Hierarchical}
+                \footnotesize
+                \begin{itemize}
+                    \setlength{\itemsep}{0.1cm}
+                    \item \textbf{Decomposizione:} Il grafo viene suddiviso in componenti in base ai pesi degli archi.
+                    \item \textbf{Component Tree:} Si crea un albero: le foglie sono i nodi, i rami sono i gruppi.
+                    \item \textbf{Visita Topologica:} Si visita l'albero in ordine topologico, non con un Min-Heap.
+                \end{itemize}
+            \end{block}
+            \vspace{0.2cm}
+            \footnotesize \textbf{Risultato:} Si estraggono "lotti" di nodi già pronti per il rilassamento, riducendo i confronti.
+        \end{column}
+        
+         \begin{column}{0.44\textwidth}
+        
+            \centering
+            \vspace{0.5cm}
+            
+            \resizebox{\linewidth}{!}{% 
+            \begin{tikzpicture}[
+                node distance=0.8cm,
+                comp/.style={rectangle, draw=darkgreen, fill=darkgreen!10, thick, rounded corners, font=\scriptsize, minimum width=1.5cm},
+                leaf/.style={circle, draw=gray, fill=gray!20, font=\tiny, inner sep=1pt}
+            ]
+                \node[comp] (root) {Radice (Tutto il Grafo)};
+                \node[comp, below left=of root, xshift=-0.2cm] (c1) {Comp. $2^i$};
+                \node[comp, below right=of root, xshift=0.2cm] (c2) {Comp. $2^j$};
+                
+                \node[leaf, below=0.4cm of c1, xshift=-0.4cm] (n1) {$v_1$};
+                \node[leaf, below=0.4cm of c1, xshift=0cm] (n2) {$v_2$};
+                \node[leaf, below=0.4cm of c1, xshift=0.4cm] (n3) {$v_3$};
+                
+                \draw[->, thick, gray] (root) -- (c1);
+                \draw[->, thick, gray] (root) -- (c2);
+                \draw[-] (c1) -- (n1);
+                \draw[-] (c1) -- (n2);
+                \draw[-] (c1) -- (n3);
+                
+                \node[below=0.1cm of n2, font=\tiny\itshape] {Nodi individuali};
+            \end{tikzpicture}%
+            }
+        \end{column}
+    \end{columns}
+\end{frame}
+
+% Slide: Thorup Running Example - Setup
+\begin{frame}{Thorup Running Example: 1. Lo scenario}
+    Consideriamo un nodo $v$ con una distanza provvisoria dalla sorgente.
+    \vspace{0.3cm}
+    \begin{columns}[T]
+        \begin{column}{0.5\textwidth}
+            \begin{itemize}
+                \item \textbf{Distanza corrente:} $d_{old}(v) = 13$ (binario: \texttt{1101})
+                \item \textbf{Nuovo arco:} Arriva un arco che abbassa la distanza a $d_{new}(v) = 9$ (binario: \texttt{1001})
+                \item \textbf{Il Problema:} In Dijkstra dovremmo riordinare la coda. Thorup deve solo decidere in quale "secchio" (\textit{bucket}) spostare $v$.
+            \end{itemize}
+        \end{column}
+        \begin{column}{0.45\textwidth}
+            \centering
+            % Qui puoi inserire un piccolo schema o testo riassuntivo
+            \begin{block}{Modello Word RAM}
+                La CPU vede i pesi come stringhe di bit, permettendo calcoli logici istantanei che ignorano il valore decimale.
+            \end{block}
+    \end{column}
+    \end{columns}
+\end{frame}
+
+% Slide: Thorup Running Example Calcolo
+\begin{frame}{Thorup Running Example: 2. Il calcolo del Bucket}
+    Per trovare il bucket corretto senza confronti, Thorup calcola la differenza bit a bit.
+    \vspace{0.3cm}
+    \begin{exampleblock}{Calcolo XOR e MSB}
+        \centering
+        \begin{tabular}{rcc}
+            $d_{old}(v) = 13$ & $\rightarrow$ & \texttt{1 1 0 1} \\
+            $d_{new}(v) = 9$  & $\rightarrow$ & \texttt{1 0 0 1} \\ \hline
+            \textbf{XOR ($\oplus$)} & $\rightarrow$ & \texttt{0 \underline{1} 0 0} \\
+        \end{tabular}
+    \end{exampleblock}
+    \vspace{0.3cm}
+    \begin{itemize}
+        \item \textbf{Risultato:} Il primo bit che differisce è il secondo da sinistra (valore posizionale $2^2$).
+        \item \textbf{Azione:} Il nodo $v$ viene spostato nel bucket di livello $2$.
+        \item \textbf{Efficienza:} Questa operazione è eseguita dalla CPU in un istante ($\mathcal{O}(1)$), indipendentemente da quanti altri nodi ci siano nel sistema.
+    \end{itemize}
+\end{frame}
+
+% Slide: Confronto con Thorup
+\begin{frame}{Confronto tra BMSSP e l'Algoritmo di Thorup}
+    Perché il BMSSP è rivoluzionario se Thorup (1999) aveva già risolto il SSSP in tempo quasi-lineare? La differenza risiede nel \textbf{modello computazionale}.
+   \vspace{-0.3cm}
+    \begin{table}[]
+        \centering
+        \renewcommand{\arraystretch}{1.5}
+        \begin{tabular}{|p{3.8cm}|p{4.5cm}|p{4.5cm}|}
+        \hline
+        \textbf{\textcolor{darkgreen}{Caratteristica}} & \textbf{\textcolor{darkgreen}{Algoritmo di Thorup}} & \textbf{\textcolor{darkgreen}{Algoritmo BMSSP}} \\ \hline
+        \textbf{Modello} & Word RAM & Comparison-Addition \\ \hline
+        \textbf{Dominio dei Pesi} & Numeri \textbf{Interi} ($\mathbb{N}$) & Numeri \textbf{Reali} ($\mathbb{R}_{\ge 0}$) \\ \hline
+        \textbf{Operazioni Ammesse} & Somme, Confronti, \textbf{Shift di bit, operatori logici} & Esclusivamente somme e confronti ($+$, $<$) \\ \hline
+        \textbf{Logica di estrazione} & \textit{Bucket Sort} sui prefissi binari & \textit{Batch Prepend} su Red-Black Tree \\ \hline
+        \end{tabular}
+    \end{table}
+        Thorup accelera l'esplorazione guardando la rappresentazione binaria dei pesi interi in memoria. Il BMSSP, invece, tratta i pesi reali come "scatole chiuse".
+\end{frame}
+
+% Slide: Notazioni
+\begin{frame}{Introduzione al BMSSP: Notazioni}
+    \begin{block}{Notazioni}
+    \begin{itemize}
+        \item $d(u)$: lunghezza del shortest path da $s$ a $u$
+        \item $\hat{d}[u]$: variabile globale per stimare $d(u)$, che viene inizializzata $\hat{d}[s]=0$ e $\hat{d}[v]=\infty$ per i vertici che non sono la sorgente $s$
+        \item $u$ è detto complete: se $\hat{d}[u] = d(u)$ (altrimenti è detto incomplete)
+        \item $S$ è un set complete: se tutti i suoi vertici lo sono.
+        \item $Pred[v]$: predecessore di $v$
+        \item $\langle l,\alpha,v_\alpha,v_{\alpha-1},...,v_1 \rangle$: percorso di lunghezza $l$, che collega $v_1 = s$ con $v_\alpha$ attraversando $\alpha$ vertici
+    \end{itemize}
+    \end{block}
+\end{frame}
+
+% Slide: L'Intuizione: Ridurre la Frontiera
+\begin{frame}{L'Intuizione: Ridurre la Frontiera}
+    Invece di ordinare una frontiera enorme di grandezza $\Theta(\vert \mathbf{V}\vert)$, l'algoritmo restringe la ricerca a un piccolo set di \textbf{Pivot}.
+    
+    \vspace{0.5cm}
+    \begin{center}
+    \begin{tikzpicture}[
+        node distance=1cm,
+        box/.style={rectangle, rounded corners, draw=darkgreen, fill=blockbodybg, thick, minimum width=2.5cm, minimum height=1cm, align=center},
+        arrow/.style={-{Stealth[scale=1.2]}, thick, darkgreen}
+        ]
+        
+        \node[box] (frontiera) {Frontiera Gigante\\ $\Theta(\vert \mathbf{V}\vert)$ nodi};
+        \node[box, right=of frontiera, fill=lightgreen!30] (bellman) {Rilassamento\\ ($k$ step di Bellman-Ford)};
+        \node[box, right=of bellman, draw=red!80, fill=red!10] (pivot) {Insieme di Pivot\\ $\le |U|/k$ nodi};
+        
+        \draw[arrow] (frontiera) -- (bellman);
+        \draw[arrow] (bellman) -- (pivot);
+        
+    \end{tikzpicture}
+    \end{center}
+    \vspace{0.1cm}
+    
+    \begin{itemize}
+        \item Se un percorso richiede meno di $k$ step, viene risolto subito con Bellman-Ford.
+        \item I nodi rimanenti dipendono da pochi \textbf{Pivot} (le radici degli alberi dei cammini minimi di profondità $\ge k$).
+    \end{itemize}
+    \begin{block}{Rilassamento}
+        \centering
+        \textbf{se} $\mathbf{d}[u] + w_{uv} < \mathbf{d}[v]$ \textbf{allora} $\mathbf{d}[v] \gets \mathbf{d}[u] + w_{uv}$
+    \end{block}
+\end{frame}
+
+% Slide: Algoritmo BMSSP
+\begin{frame}{Bounded Multi-Source Shortest Path (BMSSP)}
+    Il cuore dell'innovazione è la procedura ricorsiva \textbf{BMSSP(l, B, S)}:\\
+    Introduciamo prima il concetto di livello $l$:\begin{itemize}
+            \item \textbf{Cos'è $l$?} È l'\textbf{indice del livello di ricorsione}. \\Parte da un valore massimo e decresce unitariamente ad ogni chiamata interna.
+            \item \textbf{Controllo della Granularità:} Il livello $l$ determina l'ampiezza massima dei blocchi ($M = 2^{(l-1)t}$) all'interno della struttura dati $\mathbf{D}$.
+            \begin{itemize}
+                \item \textbf{Alti livelli di $l$:} Blocchi molto grandi. Bassa precisione di ordinamento, ma massima velocità per l'inserimento a lotti (\textit{Batch Prepend}).
+                \item \textbf{Bassi livelli di $l$:} Blocchi sempre più piccoli e precisi.
+            \end{itemize}
+            \item \textbf{Caso Base ($l=0$):} L'ampiezza del blocco collassa. La ricorsione termina e l'algoritmo ripiega su un mini-Dijkstra esatto limitato a pochi vertici.
+        \end{itemize}
+\end{frame}
+
+% Slide: Algoritmo BMSSP
+\begin{frame}{Bounded Multi-Source Shortest Path (BMSSP)}
+    \begin{block}{Divide et Impera}
+        \begin{itemize}
+            \item \textbf{Input:} un livello $l$, un upper bound $B$, e un set di sorgenti $S$.
+            \item \textbf{Logica:} L'algoritmo partiziona adattivamente il problema in sotto-problemi di dimensioni inferiori.
+            \item \textbf{Ricorsione:} Scende fino al caso base ($l=0$) dove esegue un "mini-Dijkstra" limitato all'esplorazione di $k+1$ nodi.
+            \item \textbf{Output:} Trova tutte le distanze reali inferiori a un nuovo bound $B' \le B$.
+        \end{itemize}
+    \end{block}
+\end{frame}
+
+% Slide: La Struttura Dati Ibrida
+\begin{frame}{La Struttura Dati Ibrida (Lemma 3.3)}
+    Per gestire i partizionamenti in modo efficiente, il paper introduce una struttura dati ad-hoc $\mathbf{D}$ composta da:
+    \vspace{0.3cm}
+    
+    \begin{itemize}
+        \item \textbf{Blocchi (Liste) $\mathbf{D}_l$: } I nodi con distanze simili vengono raggruppati in blocchi di dimensione massima $M$. (chiamata $\mathbf{D}_{0}$ nel paper)
+        \item \textbf{Albero Red-Black $\mathbf{D}_{rb}$: } Mantiene i limiti superiori (\textit{upper bounds}) di ciascun blocco. (chiamata $\mathbf{D}_{1}$ nel paper)
+        \item \textbf{Inserimento a Lotti (\textit{Batch Prepend}):} Invece di inserire e ordinare i nuovi nodi uno ad uno (come fa la coda di priorità in Dijkstra), i nodi con distanze simili vengono raggruppati in un unico blocco. Questo intero blocco viene inserito tutto in una volta in testa alla struttura, aggirando il costo del sorting continuo.
+    \end{itemize}
+\end{frame}
+
+% Slide: Esempio Dijkstra
+\begin{frame}{Esempio Visivo: L'approccio Classico (Dijkstra)}
+    Dijkstra esplora il grafo rigorosamente in base alla distanza minima.
+    \vspace{0.1cm}
+    
+    \begin{center}
+    \begin{tikzpicture}[
+        node distance=1cm and 1.5cm,
+        vertex/.style={circle, draw=darkgreen, fill=blockbodybg, thick, minimum size=0.6cm, inner sep=1pt},
+        edge/.style={-{Stealth}, thick},
+        pq/.style={rectangle, draw=red, fill=red!10, thick, rounded corners, align=center, font=\footnotesize}
+        ]
+        
+        % Vertici
+        \node[vertex, fill=darkgreen, text=white] (S) {$s$};
+        \node[vertex, above right=of S] (A) {$A$};
+        \node[vertex, below right=of S] (B) {$B$};
+        \node[vertex, right=of A] (C) {$C$};
+        \node[vertex, right=of B] (D) {$D$};
+        
+        % Archi con pesi
+        \draw[edge] (S) -- node[above left, scale=0.8] {2} (A);
+        \draw[edge] (S) -- node[below left, scale=0.8] {5} (B);
+        \draw[edge] (A) -- node[above, scale=0.8] {1} (C);
+        \draw[edge] (B) -- node[below, scale=0.8] {1} (D);
+        \draw[edge] (A) -- node[left, scale=0.8] {4} (B);
+        
+        % Box Priority Queue
+        \node[pq, right=1.2cm of C, yshift=-0.8cm] (PQ) {
+            \textbf{Priority Queue}\\ 
+            \textit{Costo: $\mathcal{O}(\log n)$}\\
+            \rule{2.5cm}{0.4pt}\\
+            1. Estrarre $A$ (d=2)\\
+            2. Inserire $C$ (d=3)\\
+            3. Ordinare $B$ e $C$\\
+            ...
+        };
+        
+        % Frecce
+        \draw[->, red, thick, dashed] (A) edge[bend left] (PQ);
+        \draw[->, red, thick, dashed] (B) edge[bend right] (PQ);
+        
+    \end{tikzpicture}
+    \end{center}
+    
+    \textbf{Problema:} Anche se l'arco $A \to C$ è ovvio, Dijkstra deve \textbf{sempre} rimettere tutto in coda e riordinare l'intera frontiera.
+\end{frame}
+
+% Slide: Esempio Nuovo Algoritmo
+\begin{frame}{Esempio Visivo: Il Nuovo Approccio (BMSSP)}
+    Si usano i $k$ step : raggruppa l'esplorazione ed evita il sorting globale.
+    \begin{center}
+    \begin{tikzpicture}[
+        node distance=1cm and 1.5cm,
+        vertex/.style={circle, draw=darkgreen, fill=blockbodybg, thick, minimum size=0.6cm, inner sep=1pt},
+        edge/.style={-{Stealth}, thick}
+        ]
+        
+        % Vertici
+        \node[vertex, fill=darkgreen, text=white] (S) {$s$};
+        \node[vertex, above right=of S] (A) {$A$};
+        \node[vertex, below right=of S] (B) {$B$};
+        \node[vertex, right=of A] (C) {$C$};
+        \node[vertex, right=of B] (D) {$D$};
+        
+        % Archi con pesi
+        \draw[edge] (S) -- node[above left, scale=0.8] {2} (A);
+        \draw[edge] (S) -- node[below left, scale=0.8] {5} (B);
+        \draw[edge] (A) -- node[above, scale=0.8] {1} (C);
+        \draw[edge] (B) -- node[below, scale=0.8] {1} (D);
+        \draw[edge] (A) -- node[left, scale=0.8] {4} (B);
+
+        \draw[red, thick] (A) circle (0.5cm);
+        \node[red, font=\footnotesize] at ([yshift=-0.7cm]A) {\textbf{Pivot}};
+        
+        \draw[blue, dashed, thick, rounded corners] ([xshift=-0.7cm,yshift=0.7cm]A) rectangle ([xshift=0.7cm,yshift=-0.7cm]C);
+        \node[blue, font=\footnotesize] at ([yshift=0.9cm, xshift=0.8cm]A) {Relax per $k$ step};
+        
+    \end{tikzpicture}
+    \end{center}
+    \begin{itemize}
+        \item \textbf{Propagazione senza Priority Queue:} Si \textbf{rilassano} gli archi a cascata per $k$ passi. 
+        \item Il nodo $A$ genera un sotto-albero abbastanza profondo da essere promosso a \textbf{Pivot}. Solo i Pivot passano alla ricorsione successiva.
+    \end{itemize}
+\end{frame}
+
+
+
+
+
+% Slide: Pseudocodice BMSSP
+\begin{frame}[fragile]{Pseudocodice del Bounded Multi-Source (\textsc{Bmssp})}
+    \begin{columns}
+        \begin{column}{0.45\textwidth}
+            La procedura partiziona l'esplorazione ricorsivamente.
+            \vspace{0.2cm}
+            \begin{itemize}
+                \item Usa $\textsc{FindPivots}$ per isolare $\mathbf{P}$.
+                \item Estrae i lotti di minimi con $\mathbf{D}.\textsc{Pull}()$.
+                \item Scende di livello fino a ripiegare su un mini-Dijkstra limitato.
+            \end{itemize}
+        \end{column}
+        \begin{column}{0.55\textwidth}
+                \vspace{-0.3cm}
+
+            \scriptsize
+            \begin{codebox}
+            \Procname{$\proc{Bmssp}(l, B, \mathbf{S})$}
+            \li \If $l = 0$ 
+            \li \Then \Return $\proc{BaseCase}(B, \mathbf{S})$ \End
+            \li $\mathbf{P}, \mathbf{W} \gets \proc{FindPivots}(B, \mathbf{S})$
+            \li $\mathbf{D}.\proc{Init}(M, B)$
+            \li \For each $x \in \mathbf{P}$ 
+            \li \Do $\mathbf{D}.\proc{Insert}(\langle x, \mathbf{d}[x] \rangle)$ \End
+            \li \While $|\mathbf{U}| < k 2^{lt}$ e $\mathbf{D} \neq \emptyset$ \Do
+            \li   $B_i, \mathbf{S}_i \gets \mathbf{D}.\proc{Pull}()$
+            \li   $B'_i, \mathbf{U}_i \gets \proc{Bmssp}(l-1, B_i, \mathbf{S}_i)$
+            \li   $\mathbf{U} \gets \mathbf{U} \cup \mathbf{U}_i$
+            \li   $\mathbf{K} \gets \emptyset$
+            \li   \For each $(u,v)$ uscente da $\mathbf{U}_i$ \Do
+            \li       \If $\proc{Relax}(u, v)$ \Then
+            \li           \If $\mathbf{d}[v] \in [B_i, B)$ 
+            \li \Then $\mathbf{D}.\proc{Insert}(v)$
+            \li           \ElseIf $\mathbf{d}[v] \in [B'_i, B_i)$ 
+            \li \Then $\mathbf{K} \gets \mathbf{K} \cup \{v\}$
+                          \End
+                      \End
+                  \End
+            \li   $\mathbf{D}.\proc{BatchPrepend}(\mathbf{K})$
+                \End
+            \li \Return $B', \mathbf{U}$
+            \end{codebox}
+        \end{column}
+    \end{columns}
+\end{frame}
+
+
+% Slide: Running Example 1
+\begin{frame}{Running Example: 1. Fase di $\textsc{FindPivots}$}
+    Fissiamo la soglia $k=2$. Iniziamo con il limite superiore $B = \infty$ e la sorgente $\mathbf{S} = \{s\}$. Il primo passo è propagare i cammini minimi provvisori per $k$ iterazioni.
+    \vspace{0.3cm}
+    
+    \begin{columns}
+        \begin{column}{0.45\textwidth}
+            \begin{itemize}
+                \item \textbf{Step 1:} Rilassiamo da $s$. Troviamo $A$ ($\mathbf{d}[A]=2$) e $B$ ($\mathbf{d}[B]=5$).
+                \item \textbf{Step 2:} Rilassiamo da $A$ e $B$. Troviamo $C$ ($\mathbf{d}[C]=3$) ed $E$ ($\mathbf{d}[E]=7$).
+                \item \textbf{Risultato:} L'insieme dei vertici scoperti è $\mathbf{W} = \{s, A, B, C, E\}$.
+                \item \textbf{Nota:} Nessun ordinamento totale è stato effettuato.
+            \end{itemize}
+        \end{column}
+        \begin{column}{0.55\textwidth}
+            \begin{center}
+            \begin{tikzpicture}[
+                node distance=1.5cm and 1.5cm,
+                vertex/.style={circle, draw=darkgreen, fill=blockbodybg, thick, minimum size=0.6cm, inner sep=1pt},
+                edge/.style={-{Stealth}, thick},
+                relaxed/.style={-{Stealth}, thick, blue}
+                ]
+                
+                \node[vertex, fill=darkgreen, text=white] (S) {$s$};
+                \node[vertex, above right=of S] (A) {$A$};
+                \node[vertex, right=of A] (C) {$C$};
+                \node[vertex, right=of C] (D) {$D$};
+                \node[vertex, below right=of S] (B) {$B$};
+                \node[vertex, right=of B] (E) {$E$};
+                
+                % Archi Rilassati (Blu)
+                \draw[relaxed] (S) -- node[above left, scale=0.8] {2} (A);
+                \draw[relaxed] (S) -- node[below left, scale=0.8] {5} (B);
+                \draw[relaxed] (A) -- node[above, scale=0.8] {1} (C);
+                \draw[relaxed] (B) -- node[below, scale=0.8] {2} (E);
+                
+                % Archi non ancora esplorati (Neri)
+                \draw[edge] (C) -- node[above, scale=0.8] {1} (D);
+                \draw[edge] (A) -- node[left, scale=0.8] {6} (B);
+            \end{tikzpicture}
+            \end{center}
+        \end{column}
+    \end{columns}
+\end{frame}
+
+% Slide: Running Example 2
+\begin{frame}{Running Example: 2. Foresta $\mathbf{F}$ e Selezione Pivot}
+    Costruiamo la foresta $\mathbf{F}$ analizzando i predecessori ($\mathbf{pred}$) appena scoperti in $\mathbf{W}$.
+    \vspace{0.3cm}
+    
+    \begin{columns}
+        \begin{column}{0.45\textwidth}
+            \begin{itemize}
+                \item L'albero radicato nella sorgente $s$ ha dimensione $5$.
+                \item Poiché la dimensione è $\ge k$ ($5 \ge 2$), il vertice $s$ viene promosso a \textbf{Pivot}.
+                \item Insieme dei Pivot: $\mathbf{P} = \{s\}$.
+                \item Se un nodo genera un albero piccolo ($< k$), non diventa Pivot e viene rimandato alla ricorsione.
+            \end{itemize}
+        \end{column}
+        \begin{column}{0.55\textwidth}
+            \begin{center}
+            \begin{tikzpicture}[
+                node distance=1.5cm and 1.5cm,
+                vertex/.style={circle, draw=darkgreen, fill=blockbodybg, thick, minimum size=0.6cm, inner sep=1pt},
+                pivot/.style={circle, draw=red, fill=red!20, thick, minimum size=0.6cm, inner sep=1pt},
+                tree/.style={-{Stealth}, ultra thick, darkgreen}
+                ]
+                
+                \node[pivot] (S) {$s$};
+                \node[vertex, above right=of S] (A) {$A$};
+                \node[vertex, right=of A] (C) {$C$};
+                \node[vertex, right=of C, draw=gray, text=gray] (D) {$D$}; 
+                \node[vertex, below right=of S] (B) {$B$};
+                \node[vertex, right=of B] (E) {$E$};
+                
+                \node[red, font=\footnotesize] at ([yshift=-0.6cm]S) {\textbf{Pivot}};
+                
+                % Foresta F
+                \draw[tree] (S) -- (A);
+                \draw[tree] (S) -- (B);
+                \draw[tree] (A) -- (C);
+                \draw[tree] (B) -- (E);
+                
+                \draw[-{Stealth}, gray, dashed] (C) -- (D);
+                \draw[-{Stealth}, gray, dashed] (A) -- (B);
+            \end{tikzpicture}
+            \end{center}
+        \end{column}
+    \end{columns}
+\end{frame}
+
+% Slide: Running Example 3
+\begin{frame}{Running Example: 3. Setup di $\mathbf{D}$ e Prima \textsc{Pull}}
+    L'algoritmo istanzia la struttura dati ibrida $\mathbf{D}$ e vi inserisce i Pivot per prepararli alla ricorsione.
+    \vspace{0.3cm}
+    
+    \begin{columns}
+        \begin{column}{0.5\textwidth}
+            \begin{itemize}
+                \item $\mathbf{D}.\textsc{Init}(\infty)$: Si crea un RB-Tree per $\mathbf{D}_{rb}$ e una lista vuota per $\mathbf{D}_l$.
+                \item $\mathbf{D}.\textsc{Insert}(\langle s, 0 \rangle)$ inserisce la sorgente nell'albero $\mathbf{D}_{rb}$.
+                \item \textbf{Inizio Ciclo While:} 
+                \item Eseguiamo $\mathbf{D}.\textsc{Pull}()$: estraiamo i minimi.
+                \item \textbf{Risultato:} $\mathbf{S}_1 = \{s\}$. Poiché $\mathbf{D}$ ora è vuota, il nuovo limite temporaneo è $B_1 = \infty$.
+            \end{itemize}
+        \end{column}
+        \begin{column}{0.5\textwidth}
+            \begin{center}
+            \begin{tikzpicture}[
+                node distance=0.8cm,
+                block/.style={rectangle, draw=darkgreen, fill=blockbodybg, thick, rounded corners, minimum width=2cm, minimum height=0.6cm, align=center, font=\footnotesize},
+                arrow/.style={-{Stealth}, thick}
+                ]
+                
+                \node[block] (D1) {$\mathbf{D}_{rb}$ (RB-Tree)\\ $UB: \infty$};
+                \node[block, right=0.5cm of D1, draw=blue!50] (D0) {$\mathbf{D}_l$ (Lista)\\ \textit{Vuota}};
+                
+                \node[block, below=0.5cm of D1, fill=red!10, draw=red] (Elem) {$\langle s, 0 \rangle$};
+                \draw[arrow] (D1) -- (Elem);
+                
+                \node[rectangle, draw=red, thick, rounded corners, below=0.5cm of Elem, align=center, font=\footnotesize] (Pull) {
+                    \textbf{\textsc{Pull}()}\\
+                    $\mathbf{S}_1 = \{s\}$\\
+                    $B_1 = \infty$
+                };
+                
+                \draw[arrow, red, dashed, thick] (Elem) -- (Pull);
+            \end{tikzpicture}
+            \end{center}
+        \end{column}
+    \end{columns}
+\end{frame}
+
+% Slide: Running Example 4
+\begin{frame}{Running Example: 4. Chiamata Ricorsiva e Ritorno}
+    L'algoritmo invoca ricorsivamente $\textsc{Bmssp}(l-1, B_1, \mathbf{S}_1)$ per completare l'esplorazione attorno al pivot $s$.
+    \vspace{0.3cm}
+    
+    \begin{columns}
+        \begin{column}{0.45\textwidth}
+            \begin{itemize}
+                \item La ricorsione scende di livello e consolida i cammini minimi locali.
+                \item \textbf{Ritorno della Ricorsione:}
+                \item Restituisce i vertici completati $\mathbf{U}_1 = \{s, A, C\}$.
+                \item Restituisce un nuovo limite $B'_1 = 4$ (le distanze in $\mathbf{U}_1$ sono $\le 4$).
+            \end{itemize}
+        \end{column}
+        \begin{column}{0.55\textwidth}
+            \begin{center}
+            \begin{tikzpicture}[
+                node distance=1.5cm and 1.5cm,
+                vertex/.style={circle, draw=darkgreen, fill=blockbodybg, thick, minimum size=0.6cm, inner sep=1pt},
+                completed/.style={circle, draw=purple, fill=purple!20, thick, minimum size=0.6cm, inner sep=1pt},
+                edge/.style={-{Stealth}, thick}
+                ]
+                
+                \node[completed] (S) {$s$};
+                \node[completed, above right=of S, label={[purple]above:d=2}] (A) {$A$};
+                \node[completed, right=of A, label={[purple]above:d=3}] (C) {$C$};
+                \node[vertex, right=of C] (D) {$D$};
+                \node[vertex, below right=of S] (B) {$B$};
+                \node[vertex, right=of B] (E) {$E$};
+                
+                \draw[edge, purple, ultra thick] (S) -- (A);
+                \draw[edge, purple, ultra thick] (A) -- (C);
+                
+                \node[purple, font=\footnotesize] at ([yshift=-1cm]A) {Insieme Completato $\mathbf{U}_1$};
+                \node[purple, font=\footnotesize] at ([yshift=-1.4cm]A) {$B'_1 = 4$};
+                
+            \end{tikzpicture}
+            \end{center}
+        \end{column}
+    \end{columns}
+\end{frame}
+
+% Slide: Running Example 5
+\begin{frame}{Running Example: 5. Partizionamento dei Nuovi Nodi}
+    Ora si esplorano gli archi \textbf{uscenti} dai nodi appena completati $\mathbf{U}_1$ e si classificano le nuove distanze in base a $B_1$ e $B'_1$.
+    \vspace{0.3cm}
+    
+    \begin{columns}
+        \begin{column}{0.55\textwidth}
+            \begin{itemize}
+                \item Arco $s \xrightarrow{5} B$: Troviamo $\mathbf{d}[B] = 5$.
+                \item Arco $C \xrightarrow{1} D$: Troviamo $\mathbf{d}[D] = 4$.
+                \item \textbf{Controllo dei Range:}
+                \item Ricordiamo che $B'_1 = 4$ e $B_1 = \infty$.
+                \item Entrambi i valori ($4$ e $5$) ricadono nel range $[\textcolor{red}{B'_1}, \textcolor{blue}{B_1}) = [\textcolor{red}{4}, \textcolor{blue}{\infty})$.
+                \item \textbf{Regola del Paper:} Vengono parcheggiati nell'insieme temporaneo $\mathbf{K} = \{B, D\}$.
+            \end{itemize}
+        \end{column}
+        \begin{column}{0.45\textwidth}
+            \begin{center}
+            \begin{tikzpicture}[
+                node distance=1.5cm and 1.5cm,
+                completed/.style={circle, draw=purple, fill=purple!20, thick, minimum size=0.6cm, inner sep=1pt},
+                newnode/.style={circle, draw=orange, fill=orange!20, thick, minimum size=0.6cm, inner sep=1pt},
+                edge/.style={-{Stealth}, thick}
+                ]
+                
+                \node[completed] (S) {$s$};
+                \node[completed, above right=of S] (A) {$A$};
+                \node[completed, right=of A] (C) {$C$};
+                \node[newnode, right=of C, label={[orange]right:d=4}] (D) {$D$};
+                \node[newnode, below right=of S, label={[orange]right:d=5}] (B) {$B$};
+                
+                \draw[edge, purple] (S) -- (A);
+                \draw[edge, purple] (A) -- (C);
+                
+                \draw[-{Stealth}, orange, ultra thick] (S) -- node[below left, text=black, scale=0.8] {5} (B);
+                \draw[-{Stealth}, orange, ultra thick] (C) -- node[above, text=black, scale=0.8] {1} (D);
+                
+            \end{tikzpicture}
+            \end{center}
+        \end{column}
+    \end{columns}
+\end{frame}
+
+% Slide: Running Example 6
+\begin{frame}{Running Example: 6. $\textsc{BatchPrepend}$ e Loop}
+    Per non dover fare $n$ ordinamenti in $\mathbf{D}_{rb}$, i vertici in $\mathbf{K}$ vengono convertiti in un blocco e inseriti in testa a $\mathbf{D}_l$ in tempo quasi $\mathcal{O}(1)$.
+    \vspace{0.3cm}
+    
+    \begin{columns}
+        \begin{column}{0.45\textwidth}
+            \begin{itemize}
+                \item Eseguiamo $\mathbf{D}.\textsc{BatchPrepend}(\mathbf{K})$.
+                \item $\mathbf{D}_l$ riceve un nuovo blocco contenente $B$ e $D$.
+                \item \textbf{Fine prima iterazione.} 
+                \item Al giro successivo del ciclo \texttt{while}, la funzione $\textsc{Pull}()$ estrarrà il minimo proprio da $\mathbf{D}_l$ senza dover cercare nell'intero albero!
+            \end{itemize}
+        \end{column}
+        \begin{column}{0.55\textwidth}
+            \begin{center}
+            \begin{tikzpicture}[
+                node distance=0.8cm,
+                block/.style={rectangle, draw=darkgreen, fill=blockbodybg, thick, rounded corners, minimum width=2.5cm, minimum height=0.6cm, align=center, font=\footnotesize},
+                newgrp/.style={rectangle, draw=orange, fill=orange!10, thick, rounded corners, align=center, font=\footnotesize},
+                arrow/.style={-{Stealth}, thick}
+                ]
+                
+                \node[block] (D1) {$\mathbf{D}_{rb}$ (RB-Tree)\\ \textit{Vuoto}};
+                \node[block, right=0.5cm of D1, draw=blue!50] (D0) {$\mathbf{D}_l$ (Lista)};
+                
+                \node[newgrp, below=0.5cm of D0] (K) {Blocco $\mathbf{K}$\\ $\langle D, 4 \rangle, \langle B, 5 \rangle$};
+                
+                \draw[arrow, orange, ultra thick] (K) -- node[right, scale=0.8] {\textsc{Prepend}} (D0);
+                
+            \end{tikzpicture}
+            \end{center}
+            \vspace{0.2cm}
+            \begin{block}{Il Segreto della Complessità}
+            Raggruppando i vertici in $\mathbf{K}$ e saltando la coda a priorità totale, si passa da $\Omega(n \log n)$ a $\mathcal{O}(m \log^{2/3} n)$.
+            \end{block}
+        \end{column}
+    \end{columns}
+\end{frame}
+
+
+
+
+
+
+
+
+
+
+\end{document}

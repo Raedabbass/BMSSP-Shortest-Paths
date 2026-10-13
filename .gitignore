@@ -1,0 +1,21 @@
+# File di sistema macOS
+.DS_Store
+
+# Compilati C e file di debug macOS
+main
+*.o
+*.out
+*.exe
+*.dSYM/
+
+# File temporanei LaTeX
+*.aux
+*.log
+*.nav
+*.out
+*.snm
+*.toc
+*.vrb
+
+# Cache Python
+__pycache__/
